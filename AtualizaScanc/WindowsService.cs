@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Runtime;
 using IWshRuntimeLibrary;
+using AtualizaScanc.Infra;
 
 namespace AtualizaScanc
 {
-    internal class ScancServices
+    public class WindowsService
     {
 
         public void AtualizaScanc(FilialScanc filial, String pathInstaller)
@@ -73,6 +74,7 @@ namespace AtualizaScanc
 
                 if (Directory.Exists(sourceDir))
                 {
+                    //scancRepository.GetAllFiliais();
                     var dir = new DirectoryInfo(sourceDir);
 
                     if(dir.Exists)
@@ -96,14 +98,14 @@ namespace AtualizaScanc
                             foreach (DirectoryInfo subDir in dirs)
                             {
                                 string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                                CriaRetificadora(subDir.FullName, null, newDestinationDir, true);
+                                CriaRetificadora(subDir.FullName, filial, newDestinationDir, true);
                             }
                         }
 
 
                     }
-                }
 
+                }
 
 
             } catch (Exception ex)
@@ -112,6 +114,37 @@ namespace AtualizaScanc
             }
 
         }
+        public IEnumerable<FilialScanc> ScanAtalhosEmPasta(string folderPath)
+        {
+            var directoryInfo = new DirectoryInfo(folderPath);
+            var lnkFiles = directoryInfo.GetFiles("*.lnk", SearchOption.AllDirectories);
+            var count = 0;
+            var filiais = new List<FilialScanc>();
+
+            foreach (var lnkFile in lnkFiles)
+            {
+                string targetPath = GetShortcutTargetPath(lnkFile.FullName);
+                //Console.WriteLine($"Atalho: {lnkFile.FullName} -> Executável: {targetPath}");
+                if ((!System.IO.File.Exists(targetPath)) && targetPath.Contains("SCANCCTB.exe"))
+                {
+                    count++;
+                    filiais.Add(new FilialScanc(lnkFile.Name, lnkFile.FullName, targetPath.Replace("BIN\\SCANCCTB.exe", "")));
+
+                }
+
+            }
+            Console.WriteLine($"Total de Fliais encontradas: {count}");
+            return filiais;
+        }
+        public string GetShortcutTargetPath(string shortcutPath)
+        {
+            var shell = new WshShell();
+            var shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+            return shortcut.TargetPath;
+        }
+
 
     }
+
+
 }
